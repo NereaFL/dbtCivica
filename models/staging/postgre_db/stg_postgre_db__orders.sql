@@ -1,15 +1,19 @@
 {{
   config(
-    materialized='view',
-    database = 'DB46_SILVER_DB'
+    materialized='incremental',
+    unique_key='order_id',
+    incremental_strategy='delete+insert'
   )
 }}
 
-with 
+with source as (
 
-source as (
+    select *
+    from {{ source('postgre_db', 'orders') }}
 
-    select * from {{ source('postgre_db', 'orders') }}
+    {% if is_incremental() %}
+        where order_date >= current_date - interval '3 days'
+    {% endif %}
 
 ),
 
@@ -17,6 +21,7 @@ renamed as (
 
     select
         order_id,
+        order_date,
         shipping_service,
         shipping_cost,
         address_id,

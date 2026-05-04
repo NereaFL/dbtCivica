@@ -1,12 +1,16 @@
 {{
   config(
-    materialized='view'
+    materialized='incremental',
+    unique_key='_row',
+    incremental_strategy = 'merge'
   )
 }}
+
 
 WITH src_budget AS (
     SELECT * 
     FROM {{ source('google_sheets', 'budget') }}
+    
     ),
 
 renamed_casted AS (
@@ -20,3 +24,6 @@ renamed_casted AS (
     )
 
 SELECT * FROM renamed_casted
+{% if is_incremental() %}
+        WHERE updated_at < (SELECT MAX(update_at) FROM {{ this }})
+    {% endif %}
